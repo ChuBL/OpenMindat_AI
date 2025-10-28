@@ -83,30 +83,7 @@ class ValidationPipeline:
             if "corrected_params" not in model_result:
                 model_result["corrected_params"] = corrected_params
             
-        
-            # Layer 3: Rule validators again for any final corrections from model
-            final_params = model_result.get("corrected_params", corrected_params)
-            
-            # Run rule validation on the model's corrected params
-            final_rule_result = self.rule_validator.run_validation(final_params)
-            
-            if final_rule_result["status"] != "valid":
-                # Final rule validation failed - merge issues from both layers
-                return {
-                    "status": "invalid",
-                    "issues": {
-                        **model_result.get("issues", {}),  # Keep model validation issues
-                        **final_rule_result.get("issues", {})  # Add new rule validation issues
-                    },
-                    "corrected_params": final_rule_result.get("corrected_params", final_params)
-                }
-            
-            # All validations passed - return model result with final corrected params
-            return {
-                "status": model_result["status"],  # Preserve model validation status (could be "uncertain")
-                "issues": model_result.get("issues", {}),  # Preserve any model validation issues
-                "corrected_params": final_rule_result.get("corrected_params", final_params)
-            }
+            return model_result
         
         # No model validation - return rule result with corrected params
         return rule_result
@@ -117,58 +94,58 @@ class ValidationPipeline:
 # ============================================================================
 
 if __name__ == "__main__":
-    # pass    
+    pass    
 
-    from langchain_openai import AzureChatOpenAI
-    from dotenv import load_dotenv
-    import os
+    # from langchain_openai import AzureChatOpenAI
+    # from dotenv import load_dotenv
+    # import os
 
-    load_dotenv()
-    llm = AzureChatOpenAI(
-                    deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
-                    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-                    azure_endpoint=os.getenv("AZURE_OPENAI_API_ENDPOINT"),
-                    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                    temperature=0.3,
-                )
+    # load_dotenv()
+    # llm = AzureChatOpenAI(
+    #                 deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
+    #                 api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    #                 azure_endpoint=os.getenv("AZURE_OPENAI_API_ENDPOINT"),
+    #                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    #                 temperature=0.3,
+    #             )
  
-    pipeline = ValidationPipeline(llm)
+    # pipeline = ValidationPipeline(llm)
     
-    # Test case 1: Valid params with element case correction
-    params1 = {
-        "ima": True,
-        "hardness_min": 3.0,
-        "hardness_max": 5.0,
-        "crystal_system": ["Hexagonal"],
-        "el_inc": "fe,cu",  # lowercase - should be auto-corrected
-        "el_exc": "s"        # lowercase - should be auto-corrected
-    }
+    # # Test case 1: Valid params with element case correction
+    # params1 = {
+    #     "ima": True,
+    #     "hardness_min": 3.0,
+    #     "hardness_max": 5.0,
+    #     "crystal_system": ["Hexagonal"],
+    #     "el_inc": "fe,cu",  # lowercase - should be auto-corrected
+    #     "el_exc": "s"        # lowercase - should be auto-corrected
+    # }
     
-    # Test case 2: Invalid hardness range
-    params2 = {
-        "ima": True,
-        "hardness_min": 5.0,
-        "hardness_max": 7.0,  # min > max - should fail
-        "el_inc": "Fe"
-    }
+    # # Test case 2: Valid hardness range
+    # params2 = {
+    #     "ima": True,
+    #     "hardness_min": 5.0,
+    #     "hardness_max": 7.0,  
+    #     "el_inc": "Fe"
+    # }
     
-    # Test case 3: Invalid element
-    params3 = {
-        "ima": True,
-        "el_inc": "Fe,Xx"  # Xx is invalid
-    }
+    # # Test case 3: Invalid element
+    # params3 = {
+    #     "ima": True,
+    #     "el_inc": "Fe,Xx"  # Xx is invalid
+    # }
     
-    async def test():
-        print("=== Test 1: Invalid params with case correction ===")
-        result1 = await pipeline.validate(params1, "Find IMA minerals with hardness 3-5")
-        print(json.dumps(result1, indent=2))
+    # async def test():
+    #     print("=== Test 1: Invalid params with case correction ===")
+    #     result1 = await pipeline.validate(params1, "Find IMA minerals with hardness 3-5")
+    #     print(json.dumps(result1, indent=2))
         
-        print("\n=== Test 2: Valid hardness range ===")
-        result2 = await pipeline.validate(params2, "Find ima approved iron minerals with hardness between 5 and 7")
-        print(json.dumps(result2, indent=2))
+    #     print("\n=== Test 2: Valid hardness range ===")
+    #     result2 = await pipeline.validate(params2, "Find ima approved iron minerals with hardness between 5 and 7")
+    #     print(json.dumps(result2, indent=2))
         
-        print("\n=== Test 3: Invalid element ===")
-        result3 = await pipeline.validate(params3, "Find minerals with iron")
-        print(json.dumps(result3, indent=2))
+    #     print("\n=== Test 3: Invalid element ===")
+    #     result3 = await pipeline.validate(params3, "Find minerals with iron")
+    #     print(json.dumps(result3, indent=2))
     
-    asyncio.run(test())
+    # asyncio.run(test())
