@@ -8,10 +8,10 @@ from model_validator import ModelValidator
 
 
 class MindatQueryDict(BaseModel):
-    ima: Optional[bool] = Field(description="Only IMA-approved names, should be True by default")
+    ima: Optional[bool] = Field(description="Only IMA-approved names, should be True by default except for user-specified otherwise")
     hardness_min: Optional[float] = Field(description="Mohs hardness from")
     hardness_max: Optional[float] = Field(description="Mohs hardness to")
-    crystal_system: Optional[list[str]] = Field(description=" Crystal system (csystem): multiple choice (OR), Items Enum: 'Amorphous','Hexagonal','Icosahedral','Isometric','Monoclinic','Orthorhombic','Tetragonal','Triclinic','Trigonal'")
+    crystal_system: Optional[list[str]] = Field(description="Crystal system: multiple choice (OR), Items Enum: 'Amorphous','Hexagonal','Icosahedral','Isometric','Monoclinic','Orthorhombic','Tetragonal','Triclinic','Trigonal'")
     el_inc: Optional[str] = Field(description="Chemical elements must include, e.g., 'Fe,Cu'")
     el_exc: Optional[str] = Field(description="Chemical elements must exclude, e.g., 'Fe,Cu'")
     # expand: Optional[str] = Field(description="Expand the search scope, 'description','type_localities','locality','relations','minstats', leave blank if necessary")

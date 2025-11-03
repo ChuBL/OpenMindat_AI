@@ -16,7 +16,7 @@ from collections import Counter
 from utils.validation_pipeline import ValidationPipeline, MindatQueryDict
 
 
-load_dotenv()
+load_dotenv(override=True)
 
 mcp = FastMCP("Mindat_test")
 
