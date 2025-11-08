@@ -276,9 +276,9 @@ if __name__ == "__main__":
     # test_params = {
     #     "ima": True,
     #     "hardness_min": 3,
-    #     "hardness_max": 11,  # Invalid
-    #     "crystal_system": ["Hexagonal", "InvalidSystem"],  # Invalid
-    #     "el_inc": "Fe,Cu,Xx",  # Invalid
+    #     # "hardness_max": 11,  # Invalid
+    #     # "crystal_system": ["Hexagonal", "InvalidSystem"],  # Invalid
+    #     # "el_inc": "Fe,Cu,Xx",  # Invalid
     #     "el_exc": "S,Fe"  # Conflict with el_inc
     # }
     # result = validator.run_validation(test_params)

@@ -3,14 +3,20 @@ import json
 import asyncio
 from pydantic import BaseModel, Field
 from typing import Optional
-from rule_validator import RuleValidator
-from model_validator import ModelValidator
+
+import sys
+from pathlib import Path
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+from utils.rule_validator import RuleValidator
+from utils.model_validator import ModelValidator
 
 
 class MindatQueryDict(BaseModel):
     ima: Optional[bool] = Field(description="Only IMA-approved names, should be True by default except for user-specified otherwise")
-    hardness_min: Optional[float] = Field(description="Mohs hardness from")
-    hardness_max: Optional[float] = Field(description="Mohs hardness to")
+    hardness_min: Optional[float] = Field(description="Minimum Mohs hardness (inclusive, >=). For 'not less than 5', use 5, NOT 5.01.")
+    hardness_max: Optional[float] = Field(description="Maximum Mohs hardness (inclusive, <=). For 'not more than 5', use 5.")
     crystal_system: Optional[list[str]] = Field(description="Crystal system: multiple choice (OR), Items Enum: 'Amorphous','Hexagonal','Icosahedral','Isometric','Monoclinic','Orthorhombic','Tetragonal','Triclinic','Trigonal'")
     el_inc: Optional[str] = Field(description="Chemical elements must include, e.g., 'Fe,Cu'")
     el_exc: Optional[str] = Field(description="Chemical elements must exclude, e.g., 'Fe,Cu'")
@@ -74,13 +80,13 @@ class ValidationPipeline:
         # Layer 2: Model validators (slow, asynchronous)
         if self.model_validator and original_query:
             model_result = await self.model_validator.run_validation(
-                corrected_params,  # Use corrected params for model validation
+                corrected_params,
                 original_query,
                 endpoint
             )
             
-            # Add corrected_params to model result if not present
-            if "corrected_params" not in model_result:
+            # Only add corrected_params if validation passed or uncertain
+            if model_result["status"] in ["valid", "uncertain"]:
                 model_result["corrected_params"] = corrected_params
             
             return model_result
@@ -94,58 +100,58 @@ class ValidationPipeline:
 # ============================================================================
 
 if __name__ == "__main__":
-    pass    
+    # pass    
 
-    # from langchain_openai import AzureChatOpenAI
-    # from dotenv import load_dotenv
-    # import os
+    from langchain_openai import AzureChatOpenAI
+    from dotenv import load_dotenv
+    import os
 
-    # load_dotenv()
-    # llm = AzureChatOpenAI(
-    #                 deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
-    #                 api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-    #                 azure_endpoint=os.getenv("AZURE_OPENAI_API_ENDPOINT"),
-    #                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    #                 temperature=0.3,
-    #             )
+    load_dotenv()
+    llm = AzureChatOpenAI(
+                    deployment_name=os.getenv("AZURE_DEPLOYMENT_NAME"),
+                    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+                    azure_endpoint=os.getenv("AZURE_OPENAI_API_ENDPOINT"),
+                    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                    temperature=0.3,
+                )
  
-    # pipeline = ValidationPipeline(llm)
+    pipeline = ValidationPipeline(llm)
     
-    # # Test case 1: Valid params with element case correction
-    # params1 = {
-    #     "ima": True,
-    #     "hardness_min": 3.0,
-    #     "hardness_max": 5.0,
-    #     "crystal_system": ["Hexagonal"],
-    #     "el_inc": "fe,cu",  # lowercase - should be auto-corrected
-    #     "el_exc": "s"        # lowercase - should be auto-corrected
-    # }
+    # Test case 1: Valid params with element case correction
+    params1 = {
+        "ima": True,
+        "hardness_min": 3.0,
+        "hardness_max": 5.0,
+        "crystal_system": ["Hexagonal"],
+        "el_inc": "fe,cu",  # lowercase - should be auto-corrected
+        "el_exc": "s"        # lowercase - should be auto-corrected
+    }
     
-    # # Test case 2: Valid hardness range
-    # params2 = {
-    #     "ima": True,
-    #     "hardness_min": 5.0,
-    #     "hardness_max": 7.0,  
-    #     "el_inc": "Fe"
-    # }
+    # Test case 2: Valid hardness range
+    params2 = {
+        "ima": True,
+        "hardness_min": 5.0,
+        "hardness_max": 7.0,  
+        "el_inc": "Fe"
+    }
     
-    # # Test case 3: Invalid element
-    # params3 = {
-    #     "ima": True,
-    #     "el_inc": "Fe,Xx"  # Xx is invalid
-    # }
+    # Test case 3: Invalid element
+    params3 = {
+        "ima": True,
+        "el_inc": "Fe,Xx"  # Xx is invalid
+    }
     
-    # async def test():
-    #     print("=== Test 1: Invalid params with case correction ===")
-    #     result1 = await pipeline.validate(params1, "Find IMA minerals with hardness 3-5")
-    #     print(json.dumps(result1, indent=2))
+    async def test():
+        print("=== Test 1: Invalid params with case correction ===")
+        result1 = await pipeline.validate(params1, "Find IMA minerals with hardness 3-5")
+        print(json.dumps(result1, indent=2))
         
-    #     print("\n=== Test 2: Valid hardness range ===")
-    #     result2 = await pipeline.validate(params2, "Find ima approved iron minerals with hardness between 5 and 7")
-    #     print(json.dumps(result2, indent=2))
+        print("\n=== Test 2: Valid hardness range ===")
+        result2 = await pipeline.validate(params2, "Find ima approved iron minerals with hardness between 5 and 7")
+        print(json.dumps(result2, indent=2))
         
-    #     print("\n=== Test 3: Invalid element ===")
-    #     result3 = await pipeline.validate(params3, "Find minerals with iron")
-    #     print(json.dumps(result3, indent=2))
+        print("\n=== Test 3: Invalid element ===")
+        result3 = await pipeline.validate(params3, "Find minerals with iron")
+        print(json.dumps(result3, indent=2))
     
-    # asyncio.run(test())
+    asyncio.run(test())

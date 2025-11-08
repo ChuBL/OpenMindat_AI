@@ -3,12 +3,18 @@ import json
 import asyncio
 from typing import Tuple, Optional, Dict, Any, List, Literal
 from pydantic import BaseModel, Field
-from mindat_schema_manager import MindatAPISchemaManager
+
+import sys
+from pathlib import Path
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+from utils.mindat_schema_manager import MindatAPISchemaManager
 
 class IntentHallucinationValidationOutput(BaseModel):
     """Structured output for Intent and Hallucination validation"""
-    status: Literal["valid", "invalid", "uncertain"] = Field(
-        description="Validation status: 'valid' if passes, 'invalid' if fails, 'uncertain' if needs user confirmation"
+    status: Literal["valid", "invalid"] = Field(
+        description="Validation status: 'valid' if passes, 'invalid' if fails or needs user confirmation"
     )
     issues: Optional[Dict[str, str]] = Field(
         default=None,
@@ -65,7 +71,7 @@ class ModelValidator:
         
         Returns:
             (status, issues)
-            - status: "valid" | "invalid" | "uncertain"
+            - status: "valid" | "invalid" 
             - issues: Dict with structured issue details (only if not valid):
                 {
                     "param_name": {
@@ -93,18 +99,20 @@ CRITICAL RULES:
 - "Missing parameter" means: user mentioned a requirement that maps to a provided API parameter, but it's not set
 - Example: User says "no sulfur", API docs include "el_exc", but el_exc is not in parameters → INVALID (missing el_exc)
 - Counter-example: User says "red minerals", but API docs don't include a color parameter → VALID (API doesn't support color filter, not our fault)
+- Reject non mineral dataset querying inputs, even if it might mention mineral-related information e.g., I am drinking iron mineral water → INVALID
+- Reject mineral queries that are too vague to map to any API parameters e.g., Find me some green minerals → INVALID
 
 IMPORTANT: Do NOT check data types (string vs array, etc). Data type validation is handled by other mechanisms. Focus only on semantic correctness.
 
 Response format:
 {{
-    "status": "valid" | "invalid" | "uncertain",
+    "status": "valid" | "invalid",
     "issues": {{"param_name": "reason"}}  // Only if status is not "valid"
 }}
 
 Examples:
 1. Invalid: User "with iron, no sulfur", Params {{"el_inc": "Fe"}} → {{"status": "invalid", "issues": {{"el_exc": "User said 'no sulfur' but el_exc is missing"}}}}
-2. Uncertain: User "like quartz", Params {{"hardness_min": 7}} → {{"status": "uncertain", "issues": {{"hardness_min": "Inferred from quartz, not explicit"}}}}
+2. Invalid: User "like quartz", Params {{"hardness_min": 7}} → {{"status": "Invalid", "issues": {{"hardness_min": "Inferred from quartz, not explicit"}}}}
 3. Valid: User "hardness 5-7", Params {{"hardness_min": 5, "hardness_max": 7}} → {{"status": "valid"}}
 """
         
@@ -164,7 +172,7 @@ Examples:
         
         Returns:
             {
-                "status": "valid" | "invalid" | "uncertain",
+                "status": "valid" | "invalid",
                 "issues": {  # Only if status is not "valid"
                     "param_name": {
                         "value": current_value,
@@ -195,6 +203,7 @@ Examples:
         return result
     
 if __name__ == "__main__":
+    pass
     
     # from langchain_openai import AzureChatOpenAI
     # from dotenv import load_dotenv
@@ -220,4 +229,4 @@ if __name__ == "__main__":
         
     # asyncio.run(test())
     
-    pass
+   

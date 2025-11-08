@@ -13,12 +13,19 @@ from pydantic import BaseModel, Field
 from langchain_core.output_parsers import PydanticOutputParser
 from openmindat import GeomaterialRetriever
 from collections import Counter
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 from utils.validation_pipeline import ValidationPipeline, MindatQueryDict
 
 
 load_dotenv(override=True)
 
-mcp = FastMCP("Mindat_test")
+mcp = FastMCP("mindat_query_generation_server")
 
 tracer_provider = register(
     project_name="mindat_ai_setup", 

@@ -25,9 +25,9 @@ client = MultiServerMCPClient(
             "args": ["run", "servers/server_math.py"],
             "transport": "stdio",
         },
-        "mindat": {
+        "mindat_query_generation": {
             "command": "uv",
-            "args": ["run", "servers/server_mindat.py"],
+            "args": ["run", "servers/server_mindat_query_generation.py"],
             "transport": "stdio",
         }
     }
@@ -64,8 +64,8 @@ async def main():
     mindat_agent = create_react_agent(
         model=llm,
         tools=mindat_tools,
-        name="mindat_agent",
-        prompt="You are a mindat agent that can generate search queries for mineral and rock entities in mindat database with the tools.",
+        name="mindat_query_generation_agent",
+        prompt="You are a mindat agent that can generate search query parameters for mineral entities in mindat database with the tools. You MUST return the raw json results from the tool without any additional explanation or text.",
     )
     
 
@@ -75,21 +75,11 @@ async def main():
         model=llm,
         prompt=(
             "You are a team supervisor managing a geological data processing pipeline with the agents."
+            "For user requests involving mineral data queries, always delegate to mindat_query_generation_agent and return its raw results in json."
             "You should respond to the user requests by delegating tasks to the appropriate agents, and terminate when the tasks are completed or invalid."
             "AGENTS:"
             "- math_agent: For mathematical calculations"
-            "- ocr_agent: For OCR text extraction from images/documents → returns file path with OCR results"
-            "- preprocessing_agent: For processing OCR text results into structured data → takes file path/dir, returns output dir with structured entries"
-            "- mindat_agent: For mineral/rock entity normalization → takes directory, returns directory with mindat-normalized JSON files  "
-            "- geosciml_agent: For GeosciML vocabulary matching → takes directory with normalized data, returns vocabulary-matched results"
-            "WORKFLOW:"
-            "Standard pipeline: OCR → Entry Extraction → Mindat Normalization → GeosciML Vocabulary Matching"
-            "Each agent can also be called independently for single-step processing."
-            "USAGE:"
-            "- For full pipeline: Start with ocr_agent, then pass results through subsequent agents"
-            "- For partial processing: Call any agent directly with appropriate input (file path or directory)"
-            "- Each agent (except math_agent) builds upon the previous agent's output but can work standalone"
-            "- Do not reject user requests if they provide a file path or directory for processing"
+            "- mindat_query_generation_agent: For mineral entity queries, will generate structured search parameters for querying the mindat database."
         ),
     )
     
@@ -101,7 +91,7 @@ async def main():
                 "role": "user",
                 # "content": "Please help me calculate the result of 123123+88888"# using the math agent",
                 # "content": "This is a test message to the mindat agent. Please call the mindat agent to generate the search query for quartz in mindat database.",
-                "content": "call mindat agent: Query the ima-approved mineral species with hardness between 3-5, in Hexagonal crystal system, must have Neodymium, but without sulfur. please return raw json objects if available, do not make up fake data."
+                "content": "Query the ima-approved mineral species with hardness between 3-5, in Hexagonal crystal system, must have Neodymium, but without sulfur."
                 # "content": "Please help me extract the text from the PDF files in 'data/source' using OCR agent, then process the text entries using the preprocessing agent, and normalize the mineral and rock entities using the mindat agent. Finally, match the geosciml vocabulary using the geosciml agent.",
             }
         ]
